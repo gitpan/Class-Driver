@@ -1,0 +1,27 @@
+Changes
+lib/Class/Driver.pm
+lib/Class/Driver.pod
+Makefile.PL
+MANIFEST			This list of files
+README
+t/Class-Driver.t
+t/tlib/Class/Driver/Test.pm
+t/tlib/Class/Driver/Test/foo.pm
+t/tlib/Class/Driver/Test2.pm
+t/tlib/Class/Driver/Test3.pm
+t/tlib/Class/Driver/Test4.pm
+t/tlib/Class/Driver/Test5.pm
+t/tlib/Class/Driver/Test5/foo.pm
+t/tlib/Class/Driver/Test5A.pm
+t/tlib/Class/Driver/Test6.pm
+t/tlib/Class/Driver/Test7.pm
+t/tlib/Class/Driver/TestAA.pm
+t/tlib/Class/Driver/TestAB.pm
+t/tlib/Class/Driver/TestAB/boo.pm
+t/tlib/Class/Driver/TestB.pm
+t/tlib/Class/Driver/TestX.pm
+t/tlib/Class/Driver/TestX/baz.pm
+t/tlib/Class/Driver/TestX/bew.pm
+t/tlib/Class/Driver/TestX/foo.pm
+t/tlib/Class/Driver/TestX/hmm.pm
+META.yml                                 Module meta-data (added by MakeMaker)

@@ -1,0 +1,6 @@
+Revision history for Perl extension Class::Driver.
+
+0.01  Mon Dec  5 12:22:32 2005
+	- original version; created by h2xs 1.23 with options
+		-AXP -b 5.6.0 Class::Driver
+

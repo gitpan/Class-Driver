@@ -1,0 +1,433 @@
+=pod
+
+=head1 NAME
+
+Class::Driver - Generate driver ("composite") class heiarchies on-the-fly
+
+=head1 EXAMPLE
+
+  # This is a really long synopsis, but hopefully it will give you an idea...
+
+  package MyPackage;
+  
+  use Class::Driver;
+  use base q(Class::Driver);
+  
+  our %drivers;
+  
+  return 1;
+  
+  sub new {
+    my($class, %args) = @_;
+    die "mime_type is required" unless($args{mime_type});
+    die "no driver to handle type $args{mime_type}"
+        unless($drivers{$args{mime_type}});
+    return $class->driver_load($drivers{$args{mime_type}}, %args);
+  }
+
+  sub driver_new {
+    my($class, %args) = @_;
+    return bless \%args, $class;
+  }
+
+  sub driver_required { 1; }
+  sub driver_requied_here { 0; }
+  
+  package MyPackage::avi;
+  
+  use MyPackage;
+  use base q(MyPackage);
+  use Video::Info;
+  
+  $MyPackage::drivers{'video/x-msvideo'} = 'avi';
+  
+  return 1;
+  
+  sub driver { "avi"; }
+  
+  sub driver_new {
+      my($class, %args) = @_;
+      die "'file' is a required parameter for $args{mime_type} files"
+          unless($args{file});
+      $args{info} = Video::Info->new(-file => $args{file})
+          or die "Failed to create a Video::Info object for $args{file}";
+      return $class->SUPER::driver_new(%args);
+  }
+  
+  sub duration {
+      my $self = shift;
+      return $args{info}->duration;
+  }
+  
+  package MyPackage::mp3;
+  use base q(MyPackage);
+  use MP3::Info;
+  
+  $MyPackage::drivers{'audio/mpeg'} = 'mp3';
+  
+  ## (etc...)
+
+  package main;
+  
+  my $foo = MyPackage->new(file => 'foobar.mp3', mime_type => 'audio/mpeg');
+  print "foobar.mp3 is ", $foo->duration, " seconds long.\n";
+
+=head1 DESCRIPTION
+
+=head2 What is a driver?
+
+As this module uses the term, a I<driver> supplys low-level functionality
+to a class, but does so by being a subclass instead of a parent class.
+When the main class's constructor is called, you get a more specific
+I<driver> object back instead. Exactly what type of object you get back
+is up to the main class, and the object is expected to follow the main
+class's documented API. Common perl examples of classes that follow
+this sort of pattern are L<DBI|DBI>'s C<DBD> classes (which handle interacting
+with different SQL backends), and L<libwww-perl|LWP>'s C<protocol> classes
+(which handle talking to different types of servers, http, ftp, gopher, etc.)
+
+=head2 The problem with driver class design
+
+The common problem with driver class design is subclassing. There are two
+types of object you may want to extend: The base API class, or specific
+drivers.
+
+Other object-oriented languages doublethink their way around the problem by
+making use of the I<decorator> design pattern to accomplish this
+goal.
+
+Decorators can get extremely cumbersome because they involve wrapping
+objects. Perl's C<AUTOLOAD> method helps with this, but it's still a pain
+to end up with an object wrapped in an object that's wrapped in an object
+that's wraped in a...
+
+Another problem with this approach is that there is no seperation between
+the low-level driver behaviour and the abstractions that stich this
+low-level behaviour together. The solution here is to have an API class,
+and have low-level driver classes be subclasses of that. Then you could
+apply I<polymorphism> or I<factory> models to make sure your object
+gets the correct low-level methods.
+
+The problems listed above are easy to solve on one level of class heiarchy.
+But what happens when you want to extend to base API? Or maybe a
+driver-specific API?
+
+=head2 What is Class::Driver?
+
+C<Class::Driver> is a base class for modules that want to provide a unified
+interface to related operations that depend on a specific low-level driver.
+In C<Class::Driver>, the design model of a class with drivers is:
+
+There are base classes and driver classes. Driver classes inherit from
+base classes. When a constructor is called on a base class, it will
+attempt to find a more specific driver class to instantiate instead.
+
+C<Class::Driver> manages this, as well as making it easier to create
+subclasses of both the driver classes, and their base classes.
+
+Base classes can have subclasses that are not actually drivers. When
+these subclasses are constructed, we still want the functionality that
+is provided by the parent's driver classes.
+
+I call this the "driver design pattern". It could be considered a sort of
+two-dimensional inheritance.
+
+Several modules (such as DBI) cook this sort of functionality on their own.
+C<Class::Driver> attempts to provide a unified interface for this functionality
+that makes issues such as subclassing less problematic. In the process, it
+might be creating I<more> problems, but time will tell.
+
+=head1 MECHANICS
+
+C<Class::Driver> does not provide you with a constructor. How you initialize
+your object is up to you. It instead provides you with a class factory; you
+call L<driver_load|/item_driver_load> on the class that you wish to use,
+specifying the driver you want. C<driver_load> then creates a class
+heiarchy for the specific driver
+you want (or uses one if it's been created already).
+
+This heiarchy will always be a subclass of both the driver-specific modules,
+B<and> the "base" class(es) those drivers use, regardless of where specific
+drivers exist in your inheritance tree. Consider the following example
+(arrows represent C<@ISA> relationships):
+
+  MyDriver
+    ^
+  MySubDriver           <-      MySubDriver::foo
+    ^                           MySubDriver::bar
+    ^
+  MySubSubDriver
+    ^
+  MySubSubSubDriver     <-      MySubSubSubDriver::foo
+    ^
+  MySubSubSubSubDriver
+
+If you call C<MySubSubSubSubDriver->driver_load> asking for a 'foo' driver,
+stub classes will be generated to fill in the correct inheritance tree,
+and you'll get a "MySubSubSubSubDriver::foo::_base" object back that inherits
+correctly:
+
+  MyDriver
+    ^
+  MySubDriver           <-      MySubDriver::foo        <-      MySubDriver::foo::_heiarchy
+    ^                           MySubDriver::bar                        ^
+    ^                                                                   ^
+  MySubSubDriver                                                MySubSubDriver::foo::_heiarchy
+    ^                                                                   ^
+  MySubSubSubDriver     <-      MySubSubSubDriver::foo          MySubSubSubDriver::foo::_heiarchy
+    ^                                                                   ^
+  MySubSubSubSubDriver                                          MySubSubSubSubDriver::foo::_heiarchy
+
+The _heiarchy packages also have a I<copy> of any methods from related packages.
+So while MySubSubSubDriver::foo::_heiarchy doesn't inherit from
+MySubSubSubDriver::foo in the strictest sense, it does get a copy of any
+methods provided by that package (or it's base package, MySubSubSubDriver).
+These methods are copied with L<Class::Clone|Class::Clone> so that the
+correct inheritance
+tree is followed when they call C<SUPER::>. (A second type of package, "_base",
+is also generated so that SUPER:: relationships between a driver and the
+core API are maintained).
+
+Any driver packages that don't exist (in this case, MySubSubDriver::foo,
+and MySubDriver::foo, and MyDriver::foo) will be automatically genereated
+(as stub classes that just inherit from their parent class) along the way.
+You can specify whether a driver needs to exist (or if it's okay to get
+all stub classes back), as well as what classes absolutely *must* have
+an immediate driver available; see L</driver_required> and
+L</driver_required_here> below.
+
+The end result should be that you can create base classes, drivers,
+and sub-classes and sub-drivers and everything should inherit properly.
+
+=head1 HOW TO USE THIS MODULE
+
+=over
+
+=item The basest class of your driverish module should inherit from C<Class::Driver>.
+
+=item Specify how and when a specific driver is required.
+
+This is done by putting two classes in your module. Each method should return
+true if you want your module to require it's condition, false if not.
+L</driver_load> will die if you require a condition that has not been met.
+You should supply both in your basest package, and subclasses can provide
+them as well:
+
+=over
+
+=item driver_required
+
+At least one real driver class or sub-class is required; it isn't satisfactory
+for *everything* to be a stub.
+
+I<Example where you'd return true:> a module allows you to export to a
+variety of file formats, each of which uses it's own driver
+(eg; png, xml, or csv). Subclasses (say, a module that can compose music
+out of your data) can specify their own drivers (such as mp3).
+
+I<Example where you'd return false:> a database-driven module whose base
+class provides ANSI SQL queries, and driver classes provide some alternatives
+to deal with small differences on some database engines.
+
+=item driver_required_here
+
+This class (and sub-classes that don't override C<driver_required_here>)
+B<must> have a driver class for the driver in question.
+It's not good enough that a sub (or super) class provides this driver.
+
+I<Example where you'd return true:> a video-driver abstraction module
+(maybe it picks between XWindows and M$Windows implementations). Subclasses
+can extend functionality, but low-level drivers should be driver classes
+of this package.
+
+I<You almost always want to set this false on any sub-classes that set it to
+true.> Otherwise it's value will be in herited, and your sub-class will also
+have to provide each any every driver for itself (which kind of defeats the
+purpose of C<Class::Driver> to begin with!)
+
+I<Example where you'd return false on the basest class:> the database-driven
+module described in L<driver_required|/item_driver_required> would also want
+to set C<driver_required_here> to false, since that class would be providing
+sensible default behaviour for all drivers.
+
+=back
+
+By default, driver_required_here and driver_required are false, meaning
+no specific drivers have to exist at all.
+
+=item Write a driver_new constructor on your basest class
+
+The C<driver_new> constructor should return a blessed reference to the
+class it is called from. If you wanted a hash reference created out of
+the arguments passed in, you'd do something like:
+
+  sub driver_new {
+    my($class, %args) = @_;
+    my $self = bless \%args, $class;
+    return $self;
+  }
+
+You can also provide this method on base classes, which should usually
+return something like:
+
+  $class->SUPER::new(...)
+
+instead.
+
+=item Write your constructor on your basest class
+
+Your constructor's job is to accept arguments, decide what driver we
+are going to use, and call C<driver_load>, passing in the name of
+the driver we are using, and any other arguments your
+C<driver_new>
+constructor is expecting. For
+example, if your constructor was called C<new> and you wanted to detect
+the driver based on the extension of a filename passed in:
+
+  sub new {
+      my($class, %args) = @_;
+      if($args{file} && $args{file} =~ m{^.+\.(.+?)$}) {
+          return $class->driver_load($1, %args);
+      } else {
+          die "Couldn't figure out what driver to use";
+      }
+  }
+
+(You usually want to sanitize your input a bit better than that, but you
+get the picture.)
+
+The driver's name as passed into C<driver_load> should be a valid fragment
+of a class name (eg; C<foo>, C<foo::bar> and C<foo_bar> are okay,
+C<foo-bar> is not.) This string will be used to find your
+driver-specific packages when searching the namespace of your package and
+parent packages.
+
+When you call L<driver_load|/item_driver_load>, it will attempt to find the
+appropriate driver, obeying the rules you laid down in
+L<driver_required|/item_driver_required> and
+L<driver_required_here|/item_driver_required_here>, creating any missing stub
+drivers and class heiarchies as it goes.
+
+C<driver_load> will then call your
+C<driver_new>
+constructor on the resulting class, passing in any extra arguments it received.
+
+=item Write a driver class (or classes)
+
+A driver class is inside your package's namespace. Eg; a driver for "png"
+files in "MyDataExporter" would be found in the package "MyDataExporter::png".
+It should inherit from your pacakge
+("MyDataExporter::png" @ISA "MyDataExporter"). It must also supply one
+method that indicates that it is a driver, called "driver". This method
+should return the driver's name. Eg;
+
+  sub driver { "png"; }
+
+=back
+
+=head1 METHODS
+
+The following public methods are available for use in C<Class::Driver>:
+
+=over
+
+=item driver()
+
+Returns a driver name if this is a driver class, or false if this is a
+generic class. You should override this in driver classes; see
+L<driver|/item_driver> in L</HOW TO USE THIS MODULE> for details.
+
+=item driver_load($driver,@args)
+
+Attempt to load the driver C<$driver>, generating any class heiarchies
+that are required. If successful, call it's
+C<driver_new> method, passing in C<@args>. If unsuccessful, and a driver
+is required, die. If a driver is not required, just instantiate the
+base class with C<driver_new>. See L</HOW TO USE THIS MODULE> for more
+information on C<driver_load> and C<driver_new>.
+
+=item driver_derived()
+
+Always returns true. If a package C<can> invoke the C<driver_derived>
+method, C<Class::Driver> assumes this is a driver class we're dealing
+with. Only C<driver_derived> classes have their methods copied; other
+classes are imported instead. This ensures that only methods that are
+expecting their notion of C<SUPER::> to be rewritten actually have
+that happen.
+
+=item driver_heiarchy()
+
+Returns true if this class is a generated class heiarchy, false otherwise.
+
+=item driver_base()
+
+Returns true if this class is a generated base class, false otherwise.
+
+=item driver_stub()
+
+Returns true if this is a stub driver class created by
+L<driver_create_stub|/item_driver_create_stub>, false otherwise.
+
+=item driver_required()
+
+See L<driver_required|/item_driver_required> in
+L</HOW TO USE THIS MODULE> for details.
+
+=item driver_required_here()
+
+See L<driver_required_here|/item_driver_required_here> in
+L</HOW TO USE THIS MODULE> for details.
+
+=item driver_has_driver($driver)
+
+If we have a specific driver class for C<$driver>, return true. 
+Otherwise, return the result of C<driver_has_superdriver>.
+
+=item driver_has_superdriver($driver)
+
+If any of our parent classes, has a specific driver for
+C<$driver>, return true, otherwise return false. This method will die
+if it encounters a class that doesn't have a driver that requires it
+L<there|/item_driver_required_here>.
+
+=item driver_package_name($driver)
+
+Return the package name for a driver class for C<$driver> in the current
+class. By default, this just appends "C<::$driver>" to the current class's
+name. If C<$driver> contains data that is not suitable for a class name,
+C<driver_package_name> dies.
+
+You may want to override this method if you keep your driver classes elsewhere,
+eg;
+
+  # drivers are in Package::Driver::whatever
+  sub driver_package_name {
+    my($class, $driver) = @_;
+    return $class->driver_sane_package(join('::', $class, 'Driver', $driver));
+  }
+
+See also C<driver_sane_package> below.
+
+=item driver_sane_package($package)
+
+Validate C<$package> as a valid perl package name. If it contains funny
+characters or results in a syntax error when used as a package name,
+die with a fatal error. Otherwise, return true.
+
+=back
+
+=head1 SEE ALSO
+
+L<Class::Mutator>, L<Class::Role>, L<Class::Clone>
+
+=head1 AUTHOR
+
+Tyler "Crackerjack" MacDonald <japh@crackerjack.net>
+
+=head1 LICENSE
+
+Copyright 2005 Tyler MacDonald.
+
+This is free software; you may redistribute it under the same terms as perl itself.
+
+=cut
