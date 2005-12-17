@@ -7,7 +7,7 @@ use Carp qw(croak confess);
 use Class::Clone qw(class_clone class_subclass);
 use Symbol::Table;
 
-our $VERSION = '0.001';
+our $VERSION = '0.002';
 
 return 1;
 
