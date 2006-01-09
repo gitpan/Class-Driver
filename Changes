@@ -1,5 +1,11 @@
 Revision history for Perl extension Class::Driver.
 
+0.003  Mon Jan  9 14:51:00 2006
+    - Got rid of a "variable redefined" warning that crept into Driver.pm.
+    - Explicitly require Test-Exception 0.20, imacat's smoke tester seems
+      to be getting confused about who needs Sub::Uplevel (I need
+      Test::Exception, Test::Exception needs Sub::Uplevel).
+
 0.002  Sat Dec 17 15:06:00 2005
     - Fixed inaccurate dependancies
 

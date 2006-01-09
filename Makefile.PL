@@ -9,7 +9,7 @@ WriteMakefile(
     PREREQ_PM         => {
         'Symbol::Table'     =>  1.01,
         'Class::Clone'      =>  0.03,
-        'Test::Exception'   =>  0,
+        'Test::Exception'   =>  0.20,
     },
     ($] >= 5.005 ?     ## Add these new keywords supported since 5.005
       (ABSTRACT_FROM  => 'lib/Class/Driver.pod', # retrieve abstract from module

@@ -7,7 +7,7 @@ use Carp qw(croak confess);
 use Class::Clone qw(class_clone class_subclass);
 use Symbol::Table;
 
-our $VERSION = '0.002';
+our $VERSION = '0.003';
 
 return 1;
 
@@ -29,7 +29,7 @@ sub driver_required_here { 0; }
 
 sub driver_package_name {
     my($class, $driver) = @_;
-    my $class = ref($class) ? ref($class) : $class;
+    $class = ref($class) ? ref($class) : $class;
     if($class->driver && $class->driver eq $driver) {
         return $class;
     } elsif($class->driver) {
