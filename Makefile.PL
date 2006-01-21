@@ -8,7 +8,7 @@ WriteMakefile(
     VERSION_FROM      => 'lib/Class/Driver.pm', # finds $VERSION
     PREREQ_PM         => {
         'Symbol::Table'     =>  1.01,
-        'Class::Clone'      =>  0.03,
+        'Class::Clone'      =>  0.05,
         'Test::Exception'   =>  0.20,
     },
     ($] >= 5.005 ?     ## Add these new keywords supported since 5.005

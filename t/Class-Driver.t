@@ -17,7 +17,7 @@ my $foo;
 
 ok(Class::Driver->driver_derived(), 'Class::Driver is driver derived');
 ok(!Class::Driver->driver(), 'Class::Driver is not a driver');
-ok(!Class::Driver->driver_heiarchy(), 'Class::Driver is not a heiarchy');
+ok(!Class::Driver->driver_hierarchy(), 'Class::Driver is not a hierarchy');
 ok(!Class::Driver->driver_stub(), 'Class::Driver is not a stub');
 ok(!Class::Driver->driver_base(), 'Class::Driver is not a base');
 ok(!Class::Driver->driver_required(), 'Class::Driver does not require a driver');
@@ -57,13 +57,13 @@ ok($foo->can('bar'), 'bar method from Test5 available');
 ok($foo->can('foo'), 'foo method from ::foo available');
 ok($foo->can('baz'), 'baz method from Test5A available');
 is($foo->foo, 'foo', 'correct foo method');
-ok($foo->isa('Class::Driver::Test5::foo::_heiarchy'), 'Got heiarchy back from Test5');
+ok($foo->isa('Class::Driver::Test5::foo::_hierarchy'), 'Got hierarchy back from Test5');
 
 ok($foo = $foo->new(driver => 'foo'), 'Got a another Test5::foo object');
 throws_ok
     { $foo->new(driver => 'bar') }
     (
-        qr/Class::Driver::Test5::foo::_heiarchy asked for bar, but already is foo/,
+        qr/Class::Driver::Test5::foo::_hierarchy asked for bar, but already is foo/,
         "Can't get a bar object out of a foo object"
     );
     
@@ -76,23 +76,23 @@ ok(Class::Driver::Test7::foo::driver_stub(), 'Test7 foo driver is a stub');
 dies_ok
     { Class::Driver::foo::driver_stub() }
     ('No stub was created for Class::Driver base class');
-ok(Class::Driver::Test2::foo::_heiarchy->can('foo'), 'base can foo');
-is(Class::Driver::Test2::foo::_heiarchy->foo, 'foo', 'correct foo method');
+ok(Class::Driver::Test2::foo::_hierarchy->can('foo'), 'base can foo');
+is(Class::Driver::Test2::foo::_hierarchy->foo, 'foo', 'correct foo method');
 is($foo->foo, 'foo foobie', 'foo method calling SUPER:: works');
 
 ok(Class::Driver::Test5::foo->isa('Class::Driver::Test'), 'Test5::foo is a Test');
 ok(Class::Driver::Test5::foo->isa('Class::Driver::Test5'), 'Test5::foo is a Test5');
 is_deeply(
-    \@Class::Driver::Test5::foo::_heiarchy::ISA,
+    \@Class::Driver::Test5::foo::_hierarchy::ISA,
     [ 'Class::Driver::Test5::foo::_base' ], 
-    'Test5::foo::_heiarchy has correct parents'
+    'Test5::foo::_hierarchy has correct parents'
 );
 is_deeply(
     \@Class::Driver::Test5::foo::_base::ISA,
     [
         'Class::Driver::Test5::foo99',
         'Class::Driver::Test5A',
-        'Class::Driver::Test4::foo::_heiarchy',
+        'Class::Driver::Test4::foo::_hierarchy',
         'Class::Driver::Test5::foo'
     ], 
     'Test5::foo::_base has correct parents'
@@ -125,7 +125,7 @@ ok($foo = Class::Driver::Test7->new(driver => 'foo'), 'Create a Test7::foo');
 ok(UNIVERSAL::isa($foo, 'Class::Driver::Test::foo'), 'Test7::foo is a Test::foo');
 ok(UNIVERSAL::isa($foo, 'Class::Driver::Test5::foo'), 'Test7::foo is a Test5::foo');
 
-ok(Class::Driver::Test5::foo::_heiarchy->isa('Class::Driver::Test4::foo'), 'Test4::foo was created');
+ok(Class::Driver::Test5::foo::_hierarchy->isa('Class::Driver::Test4::foo'), 'Test4::foo was created');
 ok($foo = Class::Driver::Test6->new(driver => 'foo'), 'Create a Test6::foo');
 ok(UNIVERSAL::isa($foo, 'Class::Driver::Test::foo'), 'Test6::foo is a Test::foo');
 ok(UNIVERSAL::isa($foo, 'Class::Driver::Test5::foo'), 'Test6::foo is a Test5::foo');
@@ -157,7 +157,7 @@ throws_ok
 ok(($foo = Class::Driver::TestX->new(driver => 'foo')), 'Got a driver object');
 ok($foo->isa('Class::Driver::TestX::foo'), 'Got correct driver object');
 ok(!$foo->driver_stub, 'Driver object is not a stub');
-ok(!$foo->driver_heiarchy, 'Driver object is not a heiarchy');
+ok(!$foo->driver_hierarchy, 'Driver object is not a hierarchy');
 
 throws_ok
     { $foo = Class::Driver::TestX->new(driver => 'baz'); }
@@ -202,17 +202,17 @@ throws_ok
     );
     
 throws_ok
-    { Class::Driver::Test5::foo::_heiarchy->_driver_create_heiarchy(); }
+    { Class::Driver::Test5::foo::_hierarchy->_driver_create_hierarchy(); }
     (
-        qr/driver_create_heiarchy called on heiarchy!/,
-        "Can't make a heiarchy out of a heiarchy"
+        qr/driver_create_hierarchy called on hierarchy!/,
+        "Can't make a hierarchy out of a hierarchy"
     );
     
 throws_ok
-    { Class::Driver::Test5->_driver_create_heiarchy(); }
+    { Class::Driver::Test5->_driver_create_hierarchy(); }
     (
-        qr/driver_create_heiarchy called on non-driver Class::Driver::Test5!.*\n.*throws_ok/ms,
-        "Trying to create a heiarchy on a non-driver causes full backtrace"
+        qr/driver_create_hierarchy called on non-driver Class::Driver::Test5!.*\n.*throws_ok/ms,
+        "Trying to create a hierarchy on a non-driver causes full backtrace"
     );
     
 ok($foo = Class::Driver::TestAB->new(driver => 'bum'), 'Created a TestAB');

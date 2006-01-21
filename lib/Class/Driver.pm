@@ -7,7 +7,7 @@ use Carp qw(croak confess);
 use Class::Clone qw(class_clone class_subclass);
 use Symbol::Table;
 
-our $VERSION = '0.003';
+our $VERSION = '0.004';
 
 return 1;
 
@@ -17,7 +17,7 @@ sub driver_derived { 1; }
 
 sub driver { 0; }
 
-sub driver_heiarchy { 0; }
+sub driver_hierarchy { 0; }
 
 sub driver_stub { 0; }
 
@@ -41,7 +41,7 @@ sub driver_package_name {
 
 sub driver_load {
     my($class, $driver, @args) = @_;
-    
+
     if(my $package = $class->_driver_create($driver)) {
         return $package->driver_new(@args);
     } else {
@@ -51,17 +51,17 @@ sub driver_load {
 
 sub driver_has_driver {
     my($class, $driver) = @_;
-    
+
     if($class->_driver_use($driver)) {
         return 1;
     }
-    
+
     return $class->driver_has_superdriver($driver);
 }
 
 sub driver_has_superdriver {
     my($class, $driver) = @_;
-    
+
     if($class->driver) {
         return $class->_driver_has_supersuperdriver($driver);
     } else {
@@ -99,13 +99,13 @@ sub _driver_load_base_class {
 
 sub _driver_use {
     my($class, $driver) = @_;
-    
+
     my $package = $class->driver_package_name($driver);
     if($package->can('driver_derived')) {
         return $package;
     } else {
         eval "use $package; 1;";
-    
+
         if(my $error = $@) {
             if($error =~ m{^Can't locate .+? in \@INC }) {
                 if($class->driver_required_here) {
@@ -126,15 +126,15 @@ sub _driver_isa {
     my($class, $package, @newisa) = @_;
     my $table = Symbol::Table->New('ARRAY', $package);
     my @isa = ();
-    
+
     if($table->{ISA}) {
         @isa = @{$table->{ISA}};
     }
-    
+
     if(@_ > 2) {
         $table->{ISA} = \@newisa;
     }
-    
+
     return @isa;
 }
 
@@ -146,7 +146,7 @@ sub _driver_has_supersuperdriver {
                 return 1;
         }
     }
-    
+
     return 0;
 }
 
@@ -164,7 +164,7 @@ sub _driver_create_stub {
     my($class, $driver) = @_;
 
     my $package = $class->driver_package_name($driver);
-    
+
     if(my $sub = $package->can('driver_derived')) {
         croak "package $package is already a driver class for ", $package->$sub, "!";
     }
@@ -188,12 +188,12 @@ sub _driver_create_base {
     my $class = shift;
     my $driver = $class->driver
         or confess "driver_create_base called on non-driver $class!";
-    
+
     my $package = $class->_driver_base_name;
     if($package->can('driver_derived')) {
         return $package;
     }
-    
+
     my(@isa, $isa);
     foreach $isa ($class->_driver_isa($class)) {
         if($isa->can('driver_derived')) {
@@ -203,9 +203,9 @@ sub _driver_create_base {
             push(@isa, $isa);
         }
     }
-    
+
     my @newisa;
-    
+
     while($isa = shift(@isa)) {
         if($isa->can('driver_derived')) {
             if(my $superdriver = $isa->_driver_create($driver)) {
@@ -224,30 +224,30 @@ sub _driver_create_base {
     return $package;
 }
 
-sub _driver_heiarchy_name {
+sub _driver_hierarchy_name {
     my $class = shift;
-    return $class->driver_sane_package(join('::', $class, '_heiarchy'));
+    return $class->driver_sane_package(join('::', $class, '_hierarchy'));
 }
 
-sub _driver_create_heiarchy {
+sub _driver_create_hierarchy {
     my $class = shift;
     my $driver = $class->driver
-        or confess "driver_create_heiarchy called on non-driver $class!";
-    
-    if($class->driver_heiarchy) {
-        croak "driver_create_heiarchy called on heiarchy!";
+        or confess "driver_create_hierarchy called on non-driver $class!";
+
+    if($class->driver_hierarchy) {
+        croak "driver_create_hierarchy called on hierarchy!";
     }
-    
-    my $package = $class->_driver_heiarchy_name;
-    
-    if($package->can('driver_heiarchy')) {
+
+    my $package = $class->_driver_hierarchy_name;
+
+    if($package->can('driver_hierarchy')) {
         return $package;
     }
-    
+
     my $base = $class->_driver_create_base;
     class_clone($class, $package);
     $package->_driver_isa($package, $base);
-    $package->_driver_sub('driver_heiarchy', sub { 1; });
+    $package->_driver_sub('driver_hierarchy', sub { 1; });
     return $package;
 }
 
@@ -257,10 +257,10 @@ sub _driver_create {
         if($class->driver ne $driver) {
             croak qq{$class asked for $driver, but already is }, $class->driver;
         } else {
-            if($class->driver_heiarchy) {
+            if($class->driver_hierarchy) {
                 return $class;
             } elsif($class->driver_has_superdriver($driver)) {
-                return $class->_driver_create_heiarchy;
+                return $class->_driver_create_hierarchy;
             } else {
                 return $class;
             }

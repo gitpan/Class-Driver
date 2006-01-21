@@ -1,5 +1,12 @@
 Revision history for Perl extension Class::Driver.
 
+0.004  Sat Jan 21 12:44:00 2006
+    - Applied a patch from Ron Savage [http://search.cpan.org/~rsavage/] that
+      fixed some incredibly bad spelling on my part.
+    - Depend on Class::Clone 0.05, since it has it's dependancies and use
+      of Exporter.pm fixed. This should allow this package to build with
+      dependancies and pass tests under perl 5.6.
+
 0.003  Mon Jan  9 14:51:00 2006
     - Got rid of a "variable redefined" warning that crept into Driver.pm.
     - Explicitly require Test-Exception 0.20, imacat's smoke tester seems
