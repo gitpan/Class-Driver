@@ -1,5 +1,10 @@
 Revision history for Perl extension Class::Driver.
 
+0.005  Thu Feb 16 09:37:00 2006
+    - Trivial change; we now depend on Sub::Uplevel since some automated
+      builders/testers on testers.cpan.org & ppm.activestate.com aren't
+      picking up on it themselves.
+
 0.004  Sat Jan 21 12:44:00 2006
     - Applied a patch from Ron Savage [http://search.cpan.org/~rsavage/] that
       fixed some incredibly bad spelling on my part.
